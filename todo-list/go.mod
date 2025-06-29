@@ -1,4 +1,4 @@
-module lundjrl/go-bubble-tea-playground
+module go-bubble-tea-playground/todo-list
 
 go 1.24.1
 
