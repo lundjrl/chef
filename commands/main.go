@@ -2,135 +2,118 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
-	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/log"
 )
 
-const url = "https://charm.sh/"
+type (
+	errMsg error
+)
 
 type model struct {
-    status int
-    err    error
-}
-
-func checkServer() tea.Msg {
-
-    // Create an HTTP client and make a GET request.
-    c := &http.Client{Timeout: 10 * time.Second}
-    res, err := c.Get(url)
-
-    if err != nil {
-        // There was an error making our request. Wrap the error we received
-        // in a message and return it.
-        return errMsg{err}
-    }
-    // We received a response from the server. Return the HTTP status code
-    // as a message.
-    return statusMsg(res.StatusCode)
+	textInput textinput.Model
+	err       error
 }
 
 type statusMsg int
 
-type errMsg struct{ err error }
+var UserInput string
 
-// For messages that contain errors it's often handy to also implement the
-// error interface on the message.
-func (e errMsg) Error() string { return e.err.Error() }
-
-func (m model) Init() (tea.Cmd) {
-    return checkServer
+func (m model) Init() tea.Cmd {
+	return textinput.Blink
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    switch msg := msg.(type) {
+	var cmd tea.Cmd
 
-    case statusMsg:
-        // The server returned a status message. Save it to our model. Also
-        // tell the Bubble Tea runtime we want to exit because we have nothing
-        // else to do. We'll still be able to render a final view with our
-        // status message.
-        m.status = int(msg)
-        return m, tea.Quit
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+			return m, tea.Quit
+		}
 
-    case errMsg:
-        // There was an error. Note it in the model. And tell the runtime
-        // we're done and want to quit.
-        m.err = msg
-        return m, tea.Quit
+	// We handle errors just like any other message
+	case errMsg:
+		m.err = msg
+		return m, nil
+	}
 
-    case tea.KeyMsg:
-        // Ctrl+c exits. Even with short running programs it's good to have
-        // a quit key, just in case your logic is off. Users will be very
-        // annoyed if they can't exit.
-        if msg.Type == tea.KeyCtrlC {
-            return m, tea.Quit
-        }
-    }
-
-    // If we happen to get any other messages, don't do anything.
-    return m, nil
+	m.textInput, cmd = m.textInput.Update(msg)
+	UserInput = m.textInput.Value()
+	return m, cmd
 }
 
 func (m model) View() string {
-    // If there's an error, print it out and don't do anything else.
-    if m.err != nil {
-        return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
-    }
+	// If there's an error, print it out and don't do anything else.
+	if m.err != nil {
+		log.Error(m.err)
+		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
+	}
 
-    // Tell the user we're doing something.
-    s := fmt.Sprintf("Checking %s ... ", url)
-
-    // When the server responds with a status, add it to the current line.
-    if m.status > 0 {
-        s += fmt.Sprintf("%d %s!", m.status, http.StatusText(m.status))
-    }
-
-    // Send off whatever we came up with above for rendering.
-    return "\n" + s + "\n\n"
+	return fmt.Sprintf(
+		"What do you want to add to the list?\n\n%s\n\n%s",
+		m.textInput.View(),
+		"(esc to quit)",
+	) + "\n"
 }
 
-func cmdWithArg(id int) tea.Cmd {
-    return func() tea.Msg {
-        // return someMsg{id: id}
-        return ""
-    }
+func initialModel() model {
+	ti := textinput.New()
+	ti.Placeholder = "vegetables?"
+	ti.Focus()
+	ti.CharLimit = 156
+	ti.Width = 20
+
+	return model{
+		textInput: ti,
+		err:       nil,
+	}
 }
 
-func checkSomeUrl(url string) tea.Cmd {
-    return func() tea.Msg {
-        c := &http.Client{Timeout: 10 * time.Second}
-        res, err := c.Get(url)
-        if err != nil {
-            return errMsg{err}
-        }
-        return statusMsg(res.StatusCode)
-    }
-}
-
-func parseFlag(flag string) {
-    switch flag {
-        case "run": 
-            status, err := tea.NewProgram(model{}).Run(); 
-            return status, err
-    }
+func parseCommand(command string) (tea.Model, error) {
+	log.Info("Command:: " + command)
+	switch command {
+	case "add":
+		model, err := tea.NewProgram(initialModel()).Run()
+		return model, err
+	case "list":
+		model, err := tea.NewProgram(initialModel()).Run()
+		return model, err
+	case "write":
+		model, err := tea.NewProgram(initialModel()).Run()
+		return model, err
+	default:
+		model, err := tea.NewProgram(model{}).Run()
+		return model, err
+	}
 }
 
 func main() {
-    argsWithoutProg := os.Args[1:]
+	log.Info("Starting application...")
 
-    if len(os.Args) > 1 {
-		fmt.Println("First argument:", os.Args[1])
+	argsAfterCommandName := os.Args[1:]
+
+	fmt.Println(len(argsAfterCommandName))
+
+	if len(argsAfterCommandName) == 0 {
+		log.Error("Please invoke with a command. \n\n\t`$ go run main.go <command>`\n")
+		os.Exit(1)
 	}
-    
-    if err != nil {
-        fmt.Printf("Uh oh, there was an error: %v\n", err)
-        os.Exit(1)
-    }
 
-    
+	for _, element := range argsAfterCommandName {
+		_, err := parseCommand(element)
 
-    fmt.Println("status:: ", status)
+		if err != nil {
+			log.Error(err)
+			os.Exit(1)
+		}
+	}
+
+	log.Info("User Input::" + UserInput)
+
+	log.Info("Program terminated.")
 }
