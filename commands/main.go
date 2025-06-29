@@ -92,9 +92,45 @@ func (m model) View() string {
     return "\n" + s + "\n\n"
 }
 
+func cmdWithArg(id int) tea.Cmd {
+    return func() tea.Msg {
+        // return someMsg{id: id}
+        return ""
+    }
+}
+
+func checkSomeUrl(url string) tea.Cmd {
+    return func() tea.Msg {
+        c := &http.Client{Timeout: 10 * time.Second}
+        res, err := c.Get(url)
+        if err != nil {
+            return errMsg{err}
+        }
+        return statusMsg(res.StatusCode)
+    }
+}
+
+func parseFlag(flag string) {
+    switch flag {
+        case "run": 
+            status, err := tea.NewProgram(model{}).Run(); 
+            return status, err
+    }
+}
+
 func main() {
-    if _, err := tea.NewProgram(model{}).Run(); err != nil {
+    argsWithoutProg := os.Args[1:]
+
+    if len(os.Args) > 1 {
+		fmt.Println("First argument:", os.Args[1])
+	}
+    
+    if err != nil {
         fmt.Printf("Uh oh, there was an error: %v\n", err)
         os.Exit(1)
     }
+
+    
+
+    fmt.Println("status:: ", status)
 }
