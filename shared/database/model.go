@@ -1,7 +1,10 @@
 package database
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"errors"
+	"strings"
+
+	"github.com/charmbracelet/log"
 	"gorm.io/gorm"
 )
 
@@ -11,44 +14,62 @@ type GroceryItem struct {
 	Count int    `json:"count"`
 }
 
-func GetGroceryItems(c *fiber.Ctx) error {
-	db := DBConn
-	var items []GroceryItem
-	db.Find(&items)
-	return c.JSON(items)
-}
+// func GetGroceryItems() (*sql.rows, error){
+// 	db := DBConn
+// 	var items []GroceryItem
+// 	result := db.Find(&items)
+// 	return result.Rows()
+// }
 
-func GetGroceryItemById(c *fiber.Ctx) error {
-	id := c.Params("id")
+func GetGroceryItemByName(itemName string) (string, error) {
+	name := strings.ToLower(itemName)
+
+	if len(name) <= 0 {
+		return "", errors.New("Please type a grocery item.")
+	}
+
 	db := DBConn
 
 	var item GroceryItem
-	db.Find(&item, id)
-	return c.JSON(item)
+	result := db.Find(&item, "Name = ?", name)
+	return result.Name(), result.Error
 }
 
-func CreateGroceryItem(c *fiber.Ctx) error {
+func CreateGroceryItem(itemName string) (string, error) {
+	name := strings.ToLower(itemName)
+
+	if len(name) <= 0 {
+		return "", errors.New("Please type a grocery item.")
+	}
+
 	db := DBConn
 	item := new(GroceryItem)
+	item.Name = name
+	item.Count = 1
 
-	if err := c.BodyParser(item); err != nil {
-		return c.Status(503).SendString(err.Error())
-	}
+	result := db.Create(&item)
+	log.Info("Created ::", item)
 
-	db.Create(&item)
-	return c.JSON(item)
+	return "", result.Error
 }
 
-func DeleteGroceryItem(c *fiber.Ctx) error {
-	id := c.Params("id")
+func DeleteGroceryItem(itemName string) (string, error) {
+	name := strings.ToLower(itemName)
 	db := DBConn
 
+	if len(name) <= 0 {
+		return "", errors.New("Please type a grocery item.")
+	}
+
 	var item GroceryItem
-	db.First(&item, id)
+	db.First(&item, "Name = ?", name)
 
 	if item.Name == "" {
-		return c.Status(500).SendString("No Item Found with ID")
+		return "", errors.New("There's no grocery item with that name.")
 	}
-	db.Delete(&item)
-	return c.SendString("Item Successfully deleted")
+
+	result := db.Delete(&item)
+	log.Info("Item removed.")
+
+	return "Item removed.", result.Error
 }

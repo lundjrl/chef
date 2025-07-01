@@ -1,5 +1,11 @@
 {
-  "cSpell.words": ["bubbletea", "charmbracelet", "lundjrl", "textinput"],
+  "cSpell.words": [
+    "bubbletea",
+    "charmbracelet",
+    "lipgloss",
+    "lundjrl",
+    "textinput"
+  ],
   "[go]": {
     "editor.insertSpaces": true,
     "editor.formatOnSave": true,

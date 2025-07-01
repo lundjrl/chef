@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
+	db "github.com/lundjrl/go-bubble-tea-playground/shared/database"
+	table "github.com/lundjrl/go-bubble-tea-playground/shared/table"
 )
 
 type (
@@ -79,12 +81,25 @@ func parseCommand(command string) (tea.Model, error) {
 	switch command {
 	case "add":
 		model, err := tea.NewProgram(initialModel()).Run()
+
+		log.Info(UserInput)
+		db.CreateGroceryItem(UserInput)
+
 		return model, err
 	case "list":
+		model, err := table.Main()
+		return model, err
+	case "remove":
 		model, err := tea.NewProgram(initialModel()).Run()
+
+		db.DeleteGroceryItem(UserInput)
+
 		return model, err
 	case "write":
 		model, err := tea.NewProgram(initialModel()).Run()
+
+		db.CreateGroceryItem(UserInput)
+
 		return model, err
 	default:
 		model, err := tea.NewProgram(model{}).Run()
@@ -94,6 +109,8 @@ func parseCommand(command string) (tea.Model, error) {
 
 func main() {
 	log.Info("Starting application...")
+
+	db.InitDatabaseConnection()
 
 	argsAfterCommandName := os.Args[1:]
 
@@ -105,6 +122,7 @@ func main() {
 	}
 
 	for _, element := range argsAfterCommandName {
+		// for i := 1; i < 1; i++ {
 		_, err := parseCommand(element)
 
 		if err != nil {
