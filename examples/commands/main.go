@@ -26,13 +26,22 @@ func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+func saveItem(m model) {
+	// TODO: Would save info into db.
+	m.textInput.SetValue("")
+	return
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyEnter:
+			saveItem(m)
+			return m, tea.SetWindowTitle("Added item!")
+		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 		}
 
@@ -79,15 +88,19 @@ func parseCommand(command string) (tea.Model, error) {
 	switch command {
 	case "add":
 		model, err := tea.NewProgram(initialModel()).Run()
+		tea.ClearScreen()
 		return model, err
 	case "list":
 		model, err := tea.NewProgram(initialModel()).Run()
+		tea.ClearScreen()
 		return model, err
 	case "write":
 		model, err := tea.NewProgram(initialModel()).Run()
+		tea.ClearScreen()
 		return model, err
 	default:
 		model, err := tea.NewProgram(model{}).Run()
+		tea.ClearScreen()
 		return model, err
 	}
 }
@@ -104,13 +117,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, element := range argsAfterCommandName {
-		_, err := parseCommand(element)
+	_, err := parseCommand(argsAfterCommandName[0])
 
-		if err != nil {
-			log.Error(err)
-			os.Exit(1)
-		}
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
 	}
 
 	log.Info("User Input::" + UserInput)

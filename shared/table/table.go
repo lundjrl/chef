@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	db "github.com/lundjrl/go-bubble-tea-playground/shared/database"
 )
 
@@ -35,8 +34,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "enter":
+			// TODO: write function that opens detailed view of item in second window.
 			return m, tea.Batch(
-				tea.Printf("Let's go to %s!", m.table.SelectedRow()[1]),
+				tea.Printf(m.table.SelectedRow()[1], " was selected."),
 			)
 		}
 	}
@@ -62,13 +62,10 @@ func Main() (tea.Model, error) {
 		panic(result.Error)
 	}
 
-	log.Info("Results::", items)
-
 	tableRows := []table.Row{}
 
 	for _, item := range items {
 		row := []string{fmt.Sprint(item.ID), item.Name, fmt.Sprint(item.Count)}
-		log.Info("DB Row::", row)
 		tableRows = append(tableRows, row)
 	}
 

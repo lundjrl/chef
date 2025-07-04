@@ -4,105 +4,133 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	db "github.com/lundjrl/go-bubble-tea-playground/shared/database"
-	table "github.com/lundjrl/go-bubble-tea-playground/shared/table"
 )
 
 type (
 	errMsg error
 )
 
-type model struct {
+type mainModel struct {
+	state     sessionState
+	table     table.Model
 	textInput textinput.Model
 	err       error
+	index     int
 }
+
+// sessionState to track which model is focused.
+type sessionState uint
+
+const (
+	tableView sessionState = iota
+	inputView
+)
+
+var (
+	modelStyle = lipgloss.NewStyle().
+			Width(15).
+			Height(5).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("68")).
+			MarginLeft(17)
+	focusedModelStyle = lipgloss.NewStyle().
+				Width(15).
+				Height(5).PaddingLeft(2).
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("69")).MarginLeft(17)
+	spinnerStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+	helpStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+	baseTableStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240")).Width(50).Height(5)
+)
 
 type statusMsg int
 
 var UserInput string
 
-func (m model) Init() tea.Cmd {
-	return textinput.Blink
+func newModel() mainModel {
+	m := mainModel{state: tableView}
+
+	m.table = table.New()
+	m.textInput = textinput.New()
+	return m
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+// Add initial actions on mount.
+func (m mainModel) Init() tea.Cmd {
+	m.state = tableView
+	return tea.Batch(m.textInput.Focus()) // no batch?
+}
 
+func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+		switch msg.String() {
+		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "tab":
+			if m.state == tableView {
+				m.state = inputView
+			} else {
+				m.state = tableView
+			}
 		}
 
-	// We handle errors just like any other message
-	case errMsg:
-		m.err = msg
-		return m, nil
+		switch m.state {
+		// update whichever model is focused
+		case inputView:
+			m.textInput, cmd = m.textInput.Update(msg)
+			cmds = append(cmds, cmd)
+		case tableView:
+			m.table, cmd = m.table.Update(msg)
+			cmds = append(cmds, cmd)
+		default:
+			m.table, cmd = m.table.Update(msg)
+			cmds = append(cmds, cmd)
+		}
 	}
 
-	m.textInput, cmd = m.textInput.Update(msg)
-	UserInput = m.textInput.Value()
-	return m, cmd
+	return m, tea.Batch(cmds...)
 }
 
-func (m model) View() string {
-	// If there's an error, print it out and don't do anything else.
-	if m.err != nil {
-		log.Error(m.err)
-		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
+func (m mainModel) View() string {
+	var s string
+	model := m.currentFocusedModel()
+	if m.state == tableView {
+		s += lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(fmt.Sprintf("%4s", m.table.View()))+"\n")
+	} else {
+		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(m.textInput.View()))
 	}
-
-	return fmt.Sprintf(
-		"What do you want to add to the list?\n\n%s\n\n%s",
-		m.textInput.View(),
-		"(esc to quit)",
-	) + "\n"
+	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • n: new %s • q: exit\n", model))
+	return s
 }
 
-func initialModel() model {
-	ti := textinput.New()
-	ti.Placeholder = "vegetables?"
-	ti.Focus()
-	ti.CharLimit = 156
-	ti.Width = 20
-
-	return model{
-		textInput: ti,
-		err:       nil,
+func (m mainModel) currentFocusedModel() string {
+	if m.state == inputView {
+		return "textInput"
 	}
+	return "table"
 }
 
 func parseCommand(command string) (tea.Model, error) {
-	log.Info("Command:: " + command)
 	switch command {
-	case "add":
-		model, err := tea.NewProgram(initialModel()).Run()
-
-		log.Info(UserInput)
-		db.CreateGroceryItem(UserInput)
-
+	case "init":
+		model, err := tea.NewProgram(newModel()).Run()
 		return model, err
-	case "list":
-		model, err := table.Main()
-		return model, err
-	case "remove":
-		model, err := tea.NewProgram(initialModel()).Run()
-
-		db.DeleteGroceryItem(UserInput)
-
-		return model, err
-	case "write":
-		model, err := tea.NewProgram(initialModel()).Run()
-
-		db.CreateGroceryItem(UserInput)
-
+	case "help":
+		model, err := tea.NewProgram(newModel()).Run()
 		return model, err
 	default:
-		model, err := tea.NewProgram(model{}).Run()
+		model, err := tea.NewProgram(newModel()).Run()
 		return model, err
 	}
 }
@@ -114,15 +142,51 @@ func main() {
 
 	argsAfterCommandName := os.Args[1:]
 
-	fmt.Println(len(argsAfterCommandName))
-
 	if len(argsAfterCommandName) == 0 {
 		log.Error("Please invoke with a command. \n\n\t`$ go run main.go <command>`\n")
 		os.Exit(1)
 	}
 
+	columns := []table.Column{
+		{Title: "ID", Width: 4},
+		{Title: "Name", Width: 10},
+		{Title: "Count", Width: 10},
+	}
+
+	var items []db.GroceryItem
+	result := db.DBConn.Find(&items)
+
+	if result.Error != nil {
+		panic(result.Error)
+	}
+
+	tableRows := []table.Row{}
+
+	for _, item := range items {
+		row := []string{fmt.Sprint(item.ID), item.Name, fmt.Sprint(item.Count)}
+		tableRows = append(tableRows, row)
+	}
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(tableRows),
+		table.WithFocused(true),
+		table.WithHeight(7),
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("57")).
+		Bold(false)
+	t.SetStyles(s)
+
 	for _, element := range argsAfterCommandName {
-		// for i := 1; i < 1; i++ {
 		_, err := parseCommand(element)
 
 		if err != nil {
@@ -130,8 +194,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
-	log.Info("User Input::" + UserInput)
 
 	log.Info("Program terminated.")
 }
