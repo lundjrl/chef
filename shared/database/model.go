@@ -48,7 +48,7 @@ func CreateGroceryItem(itemName string) (string, error) {
 	item.Count = 1
 
 	result := db.Create(&item)
-	log.Info("Created ::", item)
+	// log.Info("Created ::", item)
 
 	return "", result.Error
 }

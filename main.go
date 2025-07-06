@@ -12,16 +12,11 @@ import (
 	db "github.com/lundjrl/go-bubble-tea-playground/shared/database"
 )
 
-type (
-	errMsg error
-)
-
 type mainModel struct {
 	state     sessionState
 	table     table.Model
 	textInput textinput.Model
 	err       error
-	index     int
 }
 
 // sessionState to track which model is focused.
@@ -34,118 +29,31 @@ const (
 
 var (
 	modelStyle = lipgloss.NewStyle().
-			Width(15).
-			Height(5).
-			BorderStyle(lipgloss.NormalBorder()).
+			Width(30).
+			Height(8).
+			BorderStyle(lipgloss.HiddenBorder()).
 			BorderForeground(lipgloss.Color("68")).
-			MarginLeft(17)
+			MarginLeft(1)
 	focusedModelStyle = lipgloss.NewStyle().
-				Width(15).
-				Height(5).PaddingLeft(2).
+				Width(30).
+				Height(8).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("69")).MarginLeft(17)
-	spinnerStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+				BorderForeground(lipgloss.Color("69")).
+				MarginLeft(1)
 	helpStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 	baseTableStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240")).Width(50).Height(5)
+			BorderStyle(lipgloss.HiddenBorder()).
+			Width(50).Height(5)
+	focusedTableStyle = lipgloss.NewStyle().
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("69")).
+				Width(50).Height(5)
 )
-
-type statusMsg int
 
 var UserInput string
 
 func newModel() mainModel {
 	m := mainModel{state: tableView}
-
-	m.table = table.New()
-	m.textInput = textinput.New()
-	return m
-}
-
-// Add initial actions on mount.
-func (m mainModel) Init() tea.Cmd {
-	m.state = tableView
-	return tea.Batch(m.textInput.Focus()) // no batch?
-}
-
-func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	var cmds []tea.Cmd
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "tab":
-			if m.state == tableView {
-				m.state = inputView
-			} else {
-				m.state = tableView
-			}
-		}
-
-		switch m.state {
-		// update whichever model is focused
-		case inputView:
-			m.textInput, cmd = m.textInput.Update(msg)
-			cmds = append(cmds, cmd)
-		case tableView:
-			m.table, cmd = m.table.Update(msg)
-			cmds = append(cmds, cmd)
-		default:
-			m.table, cmd = m.table.Update(msg)
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	return m, tea.Batch(cmds...)
-}
-
-func (m mainModel) View() string {
-	var s string
-	model := m.currentFocusedModel()
-	if m.state == tableView {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(fmt.Sprintf("%4s", m.table.View()))+"\n")
-	} else {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedModelStyle.Render(m.textInput.View()))
-	}
-	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • n: new %s • q: exit\n", model))
-	return s
-}
-
-func (m mainModel) currentFocusedModel() string {
-	if m.state == inputView {
-		return "textInput"
-	}
-	return "table"
-}
-
-func parseCommand(command string) (tea.Model, error) {
-	switch command {
-	case "init":
-		model, err := tea.NewProgram(newModel()).Run()
-		return model, err
-	case "help":
-		model, err := tea.NewProgram(newModel()).Run()
-		return model, err
-	default:
-		model, err := tea.NewProgram(newModel()).Run()
-		return model, err
-	}
-}
-
-func main() {
-	log.Info("Starting application...")
-
-	db.InitDatabaseConnection()
-
-	argsAfterCommandName := os.Args[1:]
-
-	if len(argsAfterCommandName) == 0 {
-		log.Error("Please invoke with a command. \n\n\t`$ go run main.go <command>`\n")
-		os.Exit(1)
-	}
 
 	columns := []table.Column{
 		{Title: "ID", Width: 4},
@@ -186,9 +94,116 @@ func main() {
 		Bold(false)
 	t.SetStyles(s)
 
+	m.table = t
+	m.textInput = textinput.New()
+	m.textInput.Placeholder = "add an item?"
+	m.textInput.CharLimit = 156
+	m.textInput.Width = 20
+	m.err = nil
+	m.state = tableView
+
+	return m
+}
+
+// Add initial actions on mount.
+func (m mainModel) Init() tea.Cmd {
+	return tea.Batch(m.textInput.Focus()) // no batch?
+}
+
+func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "enter":
+			if m.state == inputView {
+				item := m.textInput.Value()
+				db.CreateGroceryItem(item)
+				rows := m.table.Rows()
+				id := len(m.table.Rows()) + 1
+				row := []string{fmt.Sprint(id), item, fmt.Sprint(1)}
+				rows = append(rows, row)
+				m.table.SetRows(rows)
+				m.table.GotoBottom()
+				m.textInput.Reset()
+			}
+		case "tab":
+			if m.state == tableView {
+				m.state = inputView
+				m.textInput.Focus()
+			} else {
+				m.state = tableView
+			}
+		}
+
+		switch m.state {
+		// update whichever model is focused
+		case inputView:
+			m.textInput, cmd = m.textInput.Update(msg)
+			cmds = append(cmds, cmd)
+		case tableView:
+			m.table, cmd = m.table.Update(msg)
+			cmds = append(cmds, cmd)
+		default:
+			m.table, cmd = m.table.Update(msg)
+			cmds = append(cmds, cmd)
+		}
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m mainModel) View() string {
+	var s string
+	model := m.currentFocusedModel()
+	if m.state == tableView {
+		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
+	} else {
+		s += lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(m.table.View()), focusedModelStyle.Render(m.textInput.View())+"\n")
+	}
+	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • n: new %s • q: exit\n", model))
+	return s
+}
+
+func (m mainModel) currentFocusedModel() string {
+	if m.state == inputView {
+		return "textInput"
+	}
+	return "table"
+}
+
+func parseCommand(command string) (tea.Model, error) {
+	switch command {
+	case "init":
+		model, err := tea.NewProgram(newModel()).Run()
+		return model, err
+	case "help":
+		model, err := tea.NewProgram(newModel()).Run()
+		return model, err
+	default:
+		model, err := tea.NewProgram(newModel()).Run()
+		return model, err
+	}
+}
+
+func main() {
+	log.Info("Starting application...")
+
+	db.InitDatabaseConnection()
+
+	argsAfterCommandName := os.Args[1:]
+
+	//	if len(argsAfterCommandName) == 0 {
+	if false {
+		log.Error("Please invoke with a command. \n\n\t`$ go run main.go <command>`\n")
+		os.Exit(1)
+	}
+
 	for _, element := range argsAfterCommandName {
 		_, err := parseCommand(element)
-
 		if err != nil {
 			log.Error(err)
 			os.Exit(1)
