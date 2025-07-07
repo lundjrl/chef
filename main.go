@@ -158,13 +158,15 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m mainModel) View() string {
 	var s string
-	model := m.currentFocusedModel()
+	//model := m.currentFocusedModel()
 	if m.state == tableView {
 		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
+		s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • enter: view entry • q: exit\n"))
+
 	} else {
 		s += lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(m.table.View()), focusedModelStyle.Render(m.textInput.View())+"\n")
+		s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • enter: create new item • q: exit\n"))
 	}
-	s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • n: new %s • q: exit\n", model))
 	return s
 }
 
