@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,27 +28,50 @@ const (
 	inputView
 )
 
+type Theme struct {
+	blue     lipgloss.Color
+	pink     lipgloss.Color
+	yellow   lipgloss.Color
+	lavender lipgloss.Color
+	bg       lipgloss.Color
+	fg       lipgloss.Color
+}
+
+// blue #89b4fa
+// pink #f5c2e7
+// yellow #f9e2af
+// lavender #b4befe
+// bg #11111b
+// fg #cdd6f4
+
+var theme = Theme{
+	blue:     lipgloss.Color("#89b4fa"),
+	pink:     lipgloss.Color("#f5c2e7"),
+	yellow:   lipgloss.Color("#f9e2af"),
+	lavender: lipgloss.Color("#b4befe"),
+	bg:       lipgloss.Color("#11111b"),
+	fg:       lipgloss.Color("#cdd6f4")}
+
 var (
 	modelStyle = lipgloss.NewStyle().
-			Width(30).
-			Height(8).
+			Width(49).
+			Height(2).
 			BorderStyle(lipgloss.HiddenBorder()).
-			BorderForeground(lipgloss.Color("68")).
 			MarginLeft(1)
 	focusedModelStyle = lipgloss.NewStyle().
-				Width(30).
-				Height(8).
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("69")).
+				Width(49).
+				Height(2).
+				BorderStyle(lipgloss.RoundedBorder()).
+				BorderForeground(theme.pink).
 				MarginLeft(1)
-	helpStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	baseTableStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.HiddenBorder()).
-			Width(50).Height(5)
+	tipContainerStyle = lipgloss.NewStyle().Foreground(theme.fg).Border(lipgloss.RoundedBorder()).BorderForeground(theme.yellow).MarginTop(1).MarginBottom(2).Width(100)
+	baseTableStyle    = lipgloss.NewStyle().
+				BorderStyle(lipgloss.HiddenBorder()).
+				Width(49).Height(5)
 	focusedTableStyle = lipgloss.NewStyle().
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("69")).
-				Width(50).Height(5)
+				BorderStyle(lipgloss.RoundedBorder()).
+				BorderForeground(theme.pink).
+				Width(49).Height(5)
 )
 
 var UserInput string
@@ -57,8 +81,8 @@ func newModel() mainModel {
 
 	columns := []table.Column{
 		{Title: "ID", Width: 4},
-		{Title: "Name", Width: 10},
-		{Title: "Count", Width: 10},
+		{Title: "Name", Width: 15},
+		{Title: "Count", Width: 24},
 	}
 
 	var items []db.GroceryItem
@@ -80,25 +104,26 @@ func newModel() mainModel {
 		table.WithRows(tableRows),
 		table.WithFocused(true),
 		table.WithHeight(7),
+		table.WithWidth(49),
 	)
 
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
+		BorderForeground(theme.fg).
 		BorderBottom(true).
 		Bold(false)
 	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
+		Foreground(theme.bg).
+		Background(theme.yellow).
+		Bold(true)
 	t.SetStyles(s)
 
 	m.table = t
 	m.textInput = textinput.New()
 	m.textInput.Placeholder = "add an item?"
 	m.textInput.CharLimit = 156
-	m.textInput.Width = 20
+	m.textInput.Width = 49
 	m.err = nil
 	m.state = tableView
 
@@ -107,7 +132,7 @@ func newModel() mainModel {
 
 // Add initial actions on mount.
 func (m mainModel) Init() tea.Cmd {
-	return tea.Batch(m.textInput.Focus()) // no batch?
+	return tea.Batch(m.textInput.Focus(), textinput.Blink) // no batch?
 }
 
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -129,13 +154,17 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.table.SetRows(rows)
 				m.table.GotoBottom()
 				m.textInput.Reset()
+				m.textInput.Cursor.SetMode(cursor.New().Mode())
 			}
 		case "tab":
 			if m.state == tableView {
 				m.state = inputView
+				m.table.Blur()
 				m.textInput.Focus()
 			} else {
 				m.state = tableView
+				m.textInput.Blur()
+				m.table.Focus()
 			}
 		}
 
@@ -144,6 +173,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case inputView:
 			m.textInput, cmd = m.textInput.Update(msg)
 			cmds = append(cmds, cmd)
+			cmds = append(cmds, textinput.Blink)
 		case tableView:
 			m.table, cmd = m.table.Update(msg)
 			cmds = append(cmds, cmd)
@@ -161,11 +191,11 @@ func (m mainModel) View() string {
 	//model := m.currentFocusedModel()
 	if m.state == tableView {
 		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
-		s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • enter: view entry • q: exit\n"))
+		s += lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tipContainerStyle.Render("tab: focus next • enter: view entry • q: exit"))
 
 	} else {
 		s += lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(m.table.View()), focusedModelStyle.Render(m.textInput.View())+"\n")
-		s += helpStyle.Render(fmt.Sprintf("\ntab: focus next • enter: create new item • q: exit\n"))
+		s += lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tipContainerStyle.Render("tab: focus next • enter: create new item • q: exit"))
 	}
 	return s
 }
