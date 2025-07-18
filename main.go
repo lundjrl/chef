@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/table"
@@ -57,21 +58,61 @@ var (
 			Width(49).
 			Height(2).
 			BorderStyle(lipgloss.HiddenBorder()).
-			MarginLeft(1)
+			MarginLeft(1).MarginTop(1)
 	focusedModelStyle = lipgloss.NewStyle().
 				Width(49).
 				Height(2).
 				BorderStyle(lipgloss.RoundedBorder()).
 				BorderForeground(theme.pink).
-				MarginLeft(1)
+				MarginLeft(1).MarginTop(1)
 	tipContainerStyle = lipgloss.NewStyle().Foreground(theme.fg).Border(lipgloss.RoundedBorder()).BorderForeground(theme.yellow).MarginTop(1).MarginBottom(2).Width(100)
 	baseTableStyle    = lipgloss.NewStyle().
 				BorderStyle(lipgloss.HiddenBorder()).
-				Width(49).Height(5)
+				Width(49).Height(5).MarginTop(1)
 	focusedTableStyle = lipgloss.NewStyle().
 				BorderStyle(lipgloss.RoundedBorder()).
 				BorderForeground(theme.pink).
-				Width(49).Height(5)
+				Width(49).Height(5).MarginTop(1)
+
+	tabContainer = lipgloss.NewStyle().Render()
+
+	horizontalRule = lipgloss.NewStyle().Render()
+
+	highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
+
+	activeTabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      " ",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┘",
+		BottomRight: "└",
+	}
+
+	tabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      "─",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┴",
+		BottomRight: "┴",
+	}
+
+	tab = lipgloss.NewStyle().
+		Border(tabBorder, true).
+		BorderForeground(highlight).
+		Padding(0, 1)
+
+	activeTab = tab.Border(activeTabBorder, true)
+
+	tabGap = tab.
+		BorderTop(false).
+		BorderLeft(false).
+		BorderRight(false)
 )
 
 var UserInput string
@@ -187,8 +228,16 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m mainModel) View() string {
-	var s string
-	//model := m.currentFocusedModel()
+	gap := tabGap.Render(strings.Repeat(" ", max(0, 98)))
+
+	var s string = lipgloss.JoinHorizontal(
+		lipgloss.Bottom,
+		activeTab.Render("Inventory"),
+		tab.Render("Grocery List"),
+		tab.Render("Special"),
+		tab.Render("Settings"),
+		gap)
+
 	if m.state == tableView {
 		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
 		s += lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tipContainerStyle.Render("tab: focus next • enter: view entry • q: exit"))
@@ -198,13 +247,6 @@ func (m mainModel) View() string {
 		s += lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tipContainerStyle.Render("tab: focus next • enter: create new item • q: exit"))
 	}
 	return s
-}
-
-func (m mainModel) currentFocusedModel() string {
-	if m.state == inputView {
-		return "textInput"
-	}
-	return "table"
 }
 
 func parseCommand(command string) (tea.Model, error) {
