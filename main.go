@@ -28,6 +28,7 @@ type sessionState uint
 const (
 	tableView sessionState = iota
 	inputView
+	welcomeView
 )
 
 type Theme struct {
@@ -171,67 +172,122 @@ func newModel() mainModel {
 	return m
 }
 
-func getActiveTabText(m mainModel) string {
+func getTabUI(m mainModel) string {
 	gap := tabGap.Render(strings.Repeat(" ", max(0, 98)))
-
-	// log.Info(m.currentTab)
 
 	switch m.currentTab {
 	case 1:
 		return lipgloss.JoinHorizontal(
 			lipgloss.Bottom,
-			tab.Render("(i) Inventory"),
-			activeTab.Render("(g) Grocery List"),
-			tab.Render("(?) Special"),
+			tab.Render("(h) Home"),
+			activeTab.Render("(i) Inventory"),
+			tab.Render("(g) Grocery List"),
 			tab.Render("(s) Settings"),
 			gap)
 	case 2:
 		return lipgloss.JoinHorizontal(
 			lipgloss.Bottom,
+			tab.Render("(h) Home"),
 			tab.Render("(i) Inventory"),
-			tab.Render("(g) Grocery List"),
-			activeTab.Render("(?) Special"),
+			activeTab.Render("(g) Grocery List"),
 			tab.Render("(s) Settings"),
 			gap)
 	case 3:
 		return lipgloss.JoinHorizontal(
 			lipgloss.Bottom,
+			tab.Render("(h) Home"),
 			tab.Render("(i) Inventory"),
 			tab.Render("(g) Grocery List"),
-			tab.Render("(?) Special"),
 			activeTab.Render("(s) Settings"),
 			gap)
 	}
 
 	return lipgloss.JoinHorizontal(
 		lipgloss.Bottom,
-		activeTab.Render("(i) Inventory"),
+		activeTab.Render("(h) Home"),
+		tab.Render("(i) Inventory"),
 		tab.Render("(g) Grocery List"),
-		tab.Render("(?) Special"),
 		tab.Render("(s) Settings"),
 		gap)
 }
 
-func (m mainModel) View() string {
-	var s string = getActiveTabText(m)
+func getWelcomeUI(m mainModel) string {
+	if m.currentTab != 0 {
+		return ""
+	}
 
-	tableHelperText := tipContainerStyle.Render("tab: focus next • enter: create new item • q: exit")
-	inputHelperText := tipContainerStyle.Render("tab: focus next • enter: view entry • q: exit")
+	titleStyle := lipgloss.NewStyle().
+		PaddingTop(2).
+		MarginLeft(6).
+		Height(2).
+		Bold(true).Foreground(theme.blue).
+		Render("Chef!")
 
-	focusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tableHelperText)
-	unfocusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), inputHelperText)
+	descriptionStyle := lipgloss.NewStyle().
+		Bold(true).PaddingTop(3).
+		Foreground(theme.lavender).
+		MarginLeft(2).
+		Render("Your new inventory cli tool")
+
+	line := lipgloss.NewStyle().
+		BorderForeground(theme.pink).
+		BorderTop(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		PaddingTop(-1).
+		Width(50).
+		MarginLeft(6).Render("\n\t- Check your inventory\n\t- Make a grocery list\n\t- Support James")
+
+	// itemsStyle := lipgloss.NewStyle().Foreground(theme.fg).PaddingTop(-5).
+	// 	MarginTop(0).
+	// 	MarginLeft(8).
+
+	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line)
+}
+
+func getTableUI(m mainModel) string {
+	if m.currentTab != 1 {
+		return ""
+	}
 
 	focusedTable := lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
 	unfocusedTable := lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(m.table.View()), focusedModelStyle.Render(m.textInput.View())+"\n")
 
 	if m.state == tableView {
-		s += focusedTable
-		s += unfocusedInput
-
-	} else {
-		s += unfocusedTable
-		s += focusedInput
+		return focusedTable
 	}
+	return unfocusedTable
+}
+
+func getInputUI(m mainModel) string {
+	if m.currentTab != 1 {
+		return ""
+	}
+
+	tableHelperText := tipContainerStyle.Render("tab: focus next • enter: create new item • q: exit")
+	inputHelperText := tipContainerStyle.Render("tab: focus next • enter: view entry • q: exit")
+	focusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tableHelperText)
+	unfocusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), inputHelperText)
+
+	if m.state == tableView {
+		return unfocusedInput
+	}
+	return focusedInput
+}
+
+func (m mainModel) View() string {
+	var s string = getTabUI(m)
+
+	// Tab 1 UI
+	s += getWelcomeUI(m)
+
+	// Tab 2 UI
+	s += getTableUI(m)
+	s += getInputUI(m)
+
+	// Tab 3 UI
+
+	// Tab 4 UI
+
 	return s
 }
 
