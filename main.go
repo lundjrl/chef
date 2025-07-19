@@ -15,10 +15,11 @@ import (
 )
 
 type mainModel struct {
-	state     sessionState
-	table     table.Model
-	textInput textinput.Model
-	err       error
+	currentTab int
+	state      sessionState
+	table      table.Model
+	textInput  textinput.Model
+	err        error
 }
 
 // sessionState to track which model is focused.
@@ -78,7 +79,7 @@ var (
 
 	horizontalRule = lipgloss.NewStyle().Render()
 
-	highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
+	highlight = lipgloss.NewStyle().Foreground(theme.pink)
 
 	activeTabBorder = lipgloss.Border{
 		Top:         "─",
@@ -104,18 +105,16 @@ var (
 
 	tab = lipgloss.NewStyle().
 		Border(tabBorder, true).
-		BorderForeground(highlight).
+		BorderForeground(theme.pink).
 		Padding(0, 1)
 
-	activeTab = tab.Border(activeTabBorder, true)
+	activeTab = tab.Border(activeTabBorder, true).Background(theme.blue)
 
 	tabGap = tab.
 		BorderTop(false).
 		BorderLeft(false).
 		BorderRight(false)
 )
-
-var UserInput string
 
 func newModel() mainModel {
 	m := mainModel{state: tableView}
@@ -167,8 +166,73 @@ func newModel() mainModel {
 	m.textInput.Width = 49
 	m.err = nil
 	m.state = tableView
+	m.currentTab = 0
 
 	return m
+}
+
+func getActiveTabText(m mainModel) string {
+	gap := tabGap.Render(strings.Repeat(" ", max(0, 98)))
+
+	// log.Info(m.currentTab)
+
+	switch m.currentTab {
+	case 1:
+		return lipgloss.JoinHorizontal(
+			lipgloss.Bottom,
+			tab.Render("(i) Inventory"),
+			activeTab.Render("(g) Grocery List"),
+			tab.Render("(?) Special"),
+			tab.Render("(s) Settings"),
+			gap)
+	case 2:
+		return lipgloss.JoinHorizontal(
+			lipgloss.Bottom,
+			tab.Render("(i) Inventory"),
+			tab.Render("(g) Grocery List"),
+			activeTab.Render("(?) Special"),
+			tab.Render("(s) Settings"),
+			gap)
+	case 3:
+		return lipgloss.JoinHorizontal(
+			lipgloss.Bottom,
+			tab.Render("(i) Inventory"),
+			tab.Render("(g) Grocery List"),
+			tab.Render("(?) Special"),
+			activeTab.Render("(s) Settings"),
+			gap)
+	}
+
+	return lipgloss.JoinHorizontal(
+		lipgloss.Bottom,
+		activeTab.Render("(i) Inventory"),
+		tab.Render("(g) Grocery List"),
+		tab.Render("(?) Special"),
+		tab.Render("(s) Settings"),
+		gap)
+}
+
+func (m mainModel) View() string {
+	var s string = getActiveTabText(m)
+
+	tableHelperText := tipContainerStyle.Render("tab: focus next • enter: create new item • q: exit")
+	inputHelperText := tipContainerStyle.Render("tab: focus next • enter: view entry • q: exit")
+
+	focusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tableHelperText)
+	unfocusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), inputHelperText)
+
+	focusedTable := lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
+	unfocusedTable := lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(m.table.View()), focusedModelStyle.Render(m.textInput.View())+"\n")
+
+	if m.state == tableView {
+		s += focusedTable
+		s += unfocusedInput
+
+	} else {
+		s += unfocusedTable
+		s += focusedInput
+	}
+	return s
 }
 
 // Add initial actions on mount.
@@ -207,6 +271,20 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textInput.Blur()
 				m.table.Focus()
 			}
+
+		case "shift+tab":
+			switch m.currentTab {
+			case 0:
+				m.currentTab = 1
+			case 1:
+				m.currentTab = 2
+			case 2:
+				m.currentTab = 3
+			case 3:
+				m.currentTab = 0
+			default:
+				m.currentTab = 0
+			}
 		}
 
 		switch m.state {
@@ -225,28 +303,6 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
-}
-
-func (m mainModel) View() string {
-	gap := tabGap.Render(strings.Repeat(" ", max(0, 98)))
-
-	var s string = lipgloss.JoinHorizontal(
-		lipgloss.Bottom,
-		activeTab.Render("Inventory"),
-		tab.Render("Grocery List"),
-		tab.Render("Special"),
-		tab.Render("Settings"),
-		gap)
-
-	if m.state == tableView {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
-		s += lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tipContainerStyle.Render("tab: focus next • enter: view entry • q: exit"))
-
-	} else {
-		s += lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(m.table.View()), focusedModelStyle.Render(m.textInput.View())+"\n")
-		s += lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tipContainerStyle.Render("tab: focus next • enter: create new item • q: exit"))
-	}
-	return s
 }
 
 func parseCommand(command string) (tea.Model, error) {
