@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/list"
 	"github.com/charmbracelet/log"
 	db "github.com/lundjrl/go-bubble-tea-playground/shared/database"
 )
@@ -211,6 +212,10 @@ func getTabUI(m mainModel) string {
 		gap)
 }
 
+func enumerateList(items list.Items, i int) string {
+	return "\t\t\t ✓ "
+}
+
 func getWelcomeUI(m mainModel) string {
 	if m.currentTab != 0 {
 		return ""
@@ -235,13 +240,24 @@ func getWelcomeUI(m mainModel) string {
 		BorderStyle(lipgloss.NormalBorder()).
 		PaddingTop(-1).
 		Width(50).
-		MarginLeft(6).Render("\n\t- Check your inventory\n\t- Make a grocery list\n\t- Support James")
+		MarginLeft(6).Render()
 
-	// itemsStyle := lipgloss.NewStyle().Foreground(theme.fg).PaddingTop(-5).
-	// 	MarginTop(0).
-	// 	MarginLeft(8).
+	itemStyle := lipgloss.NewStyle().
+		Foreground(theme.pink).
+		TabWidth(4) // Tab width can be different per terminal
 
-	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line)
+	listItems := list.New(
+		"Check your inventory",
+		"Make a grocery list",
+		"Support James",
+	).ItemStyle(itemStyle).Enumerator(enumerateList)
+
+	spacer := lipgloss.NewStyle().
+		Height(3).Render(" ")
+
+	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
+
+	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, listItems.String(), spacer, homeHelperText, spacer)
 }
 
 func getTableUI(m mainModel) string {
@@ -341,6 +357,25 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			default:
 				m.currentTab = 0
 			}
+
+		case "h":
+			if !m.textInput.Focused() {
+				m.currentTab = 0
+			}
+
+		case "i":
+			if !m.textInput.Focused() {
+				m.currentTab = 1
+			}
+
+		case "g":
+			if !m.textInput.Focused() {
+				m.currentTab = 2
+			}
+		case "s":
+			if !m.textInput.Focused() {
+				m.currentTab = 3
+			}
 		}
 
 		switch m.state {
@@ -382,7 +417,6 @@ func main() {
 
 	argsAfterCommandName := os.Args[1:]
 
-	//	if len(argsAfterCommandName) == 0 {
 	if false {
 		log.Error("Please invoke with a command. \n\n\t`$ go run main.go <command>`\n")
 		os.Exit(1)
