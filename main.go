@@ -290,6 +290,80 @@ func getInputUI(m mainModel) string {
 	return focusedInput
 }
 
+func getListUI(m mainModel) string {
+	if m.currentTab != 2 {
+		return ""
+	}
+
+	titleStyle := lipgloss.NewStyle().
+		PaddingTop(2).
+		MarginLeft(6).
+		Height(2).
+		Bold(true).Foreground(theme.blue).
+		Render("Grocery List")
+
+	descriptionStyle := lipgloss.NewStyle().
+		Bold(true).PaddingTop(3).
+		Foreground(theme.lavender).
+		MarginLeft(2).
+		Render("Coming soon...")
+
+	line := lipgloss.NewStyle().
+		BorderForeground(theme.pink).
+		BorderTop(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		PaddingTop(-1).
+		Width(50).
+		MarginLeft(6).Render()
+
+	spacer := lipgloss.NewStyle().
+		Height(3).Render(" ")
+
+	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
+
+	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, spacer, homeHelperText, spacer)
+}
+
+func getSettingsUI(m mainModel) string {
+	if m.currentTab != 3 {
+		return ""
+	}
+
+	titleStyle := lipgloss.NewStyle().
+		PaddingTop(2).
+		MarginLeft(6).
+		Height(2).
+		Bold(true).Foreground(theme.blue).
+		Render("Chef!")
+
+	descriptionStyle := lipgloss.NewStyle().
+		Bold(true).PaddingTop(3).
+		Foreground(theme.lavender).
+		MarginLeft(2).
+		Render("Your new inventory cli tool")
+
+	line := lipgloss.NewStyle().
+		BorderForeground(theme.pink).
+		BorderTop(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		PaddingTop(-1).
+		Width(50).
+		MarginLeft(6).Render()
+
+	bodyStyle := lipgloss.NewStyle().
+		Bold(true).PaddingTop(2).
+		Foreground(theme.lavender).
+		MarginLeft(6).
+		Render("Settings coming soon...\n\nEventually you'll be able to wipe your list.")
+
+	spacer := lipgloss.NewStyle().
+		Height(3).Render(" ")
+
+	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
+
+	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, bodyStyle, spacer, homeHelperText, spacer)
+}
+
 func (m mainModel) View() string {
 	var s string = getTabUI(m)
 
@@ -301,8 +375,10 @@ func (m mainModel) View() string {
 	s += getInputUI(m)
 
 	// Tab 3 UI
+	s += getListUI(m)
 
 	// Tab 4 UI
+	s += getSettingsUI(m)
 
 	return s
 }
@@ -396,6 +472,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// Note: This is set up to add future commands.
 func parseCommand(command string) (tea.Model, error) {
 	switch command {
 	case "init":
