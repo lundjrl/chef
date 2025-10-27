@@ -10,6 +10,7 @@
 *_test
 
 # Generated files
+!main.go
 main*
 !main.go
 
