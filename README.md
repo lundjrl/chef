@@ -24,3 +24,7 @@
       <img alt="Screenshot of application inventory view." src="assets/inventory.png" width="400px">
     </a>
 </div>
+
+## Running Tests
+
+- `go test ./shared/tests -v`
