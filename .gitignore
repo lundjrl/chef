@@ -1,0 +1,26 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+*.wasm
+*.o
+
+# Test binaries
+*_test
+
+# Generated files
+main*
+!main.go
+
+bin/
+build/
+
+.idea/
+.vscode/
+*.swp
+*.bak
+.DS_Store
+
+.env
+.env.*
