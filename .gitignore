@@ -18,7 +18,6 @@ bin/
 build/
 
 .idea/
-.vscode/
 *.swp
 *.bak
 .DS_Store
