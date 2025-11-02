@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	db "github.com/lundjrl/go-bubble-tea-playground/shared/database"
+	db "github.com/lundjrl/chef/shared/database"
 )
 
 var baseStyle = lipgloss.NewStyle().

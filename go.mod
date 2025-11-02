@@ -1,4 +1,4 @@
-module github.com/lundjrl/go-bubble-tea-playground
+module github.com/lundjrl/chef
 
 go 1.23.0
 

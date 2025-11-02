@@ -1,4 +1,4 @@
-module go-bubble-tea-playground/table
+module chef/table
 
 go 1.24.1
 

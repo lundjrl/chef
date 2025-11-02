@@ -1,4 +1,4 @@
-module go-bubble-tea-playground/commands
+module chef/commands
 
 go 1.24.1
 
