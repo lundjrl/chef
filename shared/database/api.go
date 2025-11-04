@@ -18,6 +18,7 @@ func InitDatabaseConnection() {
 	fmt.Println("Database connection started")
 
 	DBConn.AutoMigrate(&GroceryItem{})
+	DBConn.AutoMigrate(&CheckboxItem{})
 
 	fmt.Println("Database Migrated")
 }

@@ -18,10 +18,11 @@ bin/
 build/
 
 .idea/
-.vscode/
 *.swp
 *.bak
 .DS_Store
 
 .env
 .env.*
+
+app.db

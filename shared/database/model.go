@@ -14,6 +14,12 @@ type GroceryItem struct {
 	Count int    `json:"count"`
 }
 
+type CheckboxItem struct {
+	gorm.Model
+	Name    string `json:"name"`
+	Checked bool   `json:"checked"`
+}
+
 // func GetGroceryItems() (*sql.rows, error){
 // 	db := DBConn
 // 	var items []GroceryItem
@@ -48,7 +54,6 @@ func CreateGroceryItem(itemName string) (string, error) {
 	item.Count = 1
 
 	result := db.Create(&item)
-	// log.Info("Created ::", item)
 
 	return "", result.Error
 }

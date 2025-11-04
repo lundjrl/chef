@@ -3,123 +3,21 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/list"
 	"github.com/charmbracelet/log"
-	db "github.com/lundjrl/go-bubble-tea-playground/shared/database"
+	"github.com/lundjrl/chef/shared"
+	db "github.com/lundjrl/chef/shared/database"
+	"github.com/lundjrl/chef/shared/ui"
 )
 
-type mainModel struct {
-	currentTab int
-	state      sessionState
-	table      table.Model
-	textInput  textinput.Model
-	err        error
-}
-
-// sessionState to track which model is focused.
-type sessionState uint
-
-const (
-	tableView sessionState = iota
-	inputView
-	welcomeView
-)
-
-type Theme struct {
-	blue     lipgloss.Color
-	pink     lipgloss.Color
-	yellow   lipgloss.Color
-	lavender lipgloss.Color
-	bg       lipgloss.Color
-	fg       lipgloss.Color
-}
-
-// blue #89b4fa
-// pink #f5c2e7
-// yellow #f9e2af
-// lavender #b4befe
-// bg #11111b
-// fg #cdd6f4
-
-var theme = Theme{
-	blue:     lipgloss.Color("#89b4fa"),
-	pink:     lipgloss.Color("#f5c2e7"),
-	yellow:   lipgloss.Color("#f9e2af"),
-	lavender: lipgloss.Color("#b4befe"),
-	bg:       lipgloss.Color("#11111b"),
-	fg:       lipgloss.Color("#cdd6f4")}
-
-var (
-	modelStyle = lipgloss.NewStyle().
-			Width(49).
-			Height(2).
-			BorderStyle(lipgloss.HiddenBorder()).
-			MarginLeft(1).MarginTop(1)
-	focusedModelStyle = lipgloss.NewStyle().
-				Width(49).
-				Height(2).
-				BorderStyle(lipgloss.RoundedBorder()).
-				BorderForeground(theme.pink).
-				MarginLeft(1).MarginTop(1)
-	tipContainerStyle = lipgloss.NewStyle().Foreground(theme.fg).Border(lipgloss.RoundedBorder()).BorderForeground(theme.yellow).MarginTop(1).MarginBottom(2).Width(100)
-	baseTableStyle    = lipgloss.NewStyle().
-				BorderStyle(lipgloss.HiddenBorder()).
-				Width(49).Height(5).MarginTop(1)
-	focusedTableStyle = lipgloss.NewStyle().
-				BorderStyle(lipgloss.RoundedBorder()).
-				BorderForeground(theme.pink).
-				Width(49).Height(5).MarginTop(1)
-
-	tabContainer = lipgloss.NewStyle().Render()
-
-	horizontalRule = lipgloss.NewStyle().Render()
-
-	highlight = lipgloss.NewStyle().Foreground(theme.pink)
-
-	activeTabBorder = lipgloss.Border{
-		Top:         "─",
-		Bottom:      " ",
-		Left:        "│",
-		Right:       "│",
-		TopLeft:     "╭",
-		TopRight:    "╮",
-		BottomLeft:  "┘",
-		BottomRight: "└",
-	}
-
-	tabBorder = lipgloss.Border{
-		Top:         "─",
-		Bottom:      "─",
-		Left:        "│",
-		Right:       "│",
-		TopLeft:     "╭",
-		TopRight:    "╮",
-		BottomLeft:  "┴",
-		BottomRight: "┴",
-	}
-
-	tab = lipgloss.NewStyle().
-		Border(tabBorder, true).
-		BorderForeground(theme.pink).
-		Padding(0, 1)
-
-	activeTab = tab.Border(activeTabBorder, true).Background(theme.blue)
-
-	tabGap = tab.
-		BorderTop(false).
-		BorderLeft(false).
-		BorderRight(false)
-)
+type mainModel shared.MainModel
 
 func newModel() mainModel {
-	m := mainModel{state: tableView}
+	m := mainModel{State: shared.TableView}
 
 	columns := []table.Column{
 		{Title: "ID", Width: 4},
@@ -150,242 +48,45 @@ func newModel() mainModel {
 	)
 
 	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(theme.fg).
-		BorderBottom(true).
-		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(theme.bg).
-		Background(theme.yellow).
-		Bold(true)
+	s.Header = ui.TableHeaderStyle
+	s.Selected = ui.TableSelectedStyle
+
 	t.SetStyles(s)
 
-	m.table = t
-	m.textInput = textinput.New()
-	m.textInput.Placeholder = "add an item?"
-	m.textInput.CharLimit = 156
-	m.textInput.Width = 49
-	m.err = nil
-	m.state = tableView
-	m.currentTab = 0
+	m.Table = t
+	m.TextInput = textinput.New()
+	m.TextInput.Placeholder = "add an item?"
+	m.TextInput.CharLimit = 156
+	m.TextInput.Width = 49
+	m.Err = nil
+	m.State = shared.TableView
+	m.CurrentTab = 0
 
 	return m
 }
 
-func getTabUI(m mainModel) string {
-	gap := tabGap.Render(strings.Repeat(" ", max(0, 98)))
-
-	switch m.currentTab {
-	case 1:
-		return lipgloss.JoinHorizontal(
-			lipgloss.Bottom,
-			tab.Render("(h) Home"),
-			activeTab.Render("(i) Inventory"),
-			tab.Render("(g) Grocery List"),
-			tab.Render("(s) Settings"),
-			gap)
-	case 2:
-		return lipgloss.JoinHorizontal(
-			lipgloss.Bottom,
-			tab.Render("(h) Home"),
-			tab.Render("(i) Inventory"),
-			activeTab.Render("(g) Grocery List"),
-			tab.Render("(s) Settings"),
-			gap)
-	case 3:
-		return lipgloss.JoinHorizontal(
-			lipgloss.Bottom,
-			tab.Render("(h) Home"),
-			tab.Render("(i) Inventory"),
-			tab.Render("(g) Grocery List"),
-			activeTab.Render("(s) Settings"),
-			gap)
-	}
-
-	return lipgloss.JoinHorizontal(
-		lipgloss.Bottom,
-		activeTab.Render("(h) Home"),
-		tab.Render("(i) Inventory"),
-		tab.Render("(g) Grocery List"),
-		tab.Render("(s) Settings"),
-		gap)
-}
-
-func enumerateList(items list.Items, i int) string {
-	return "\t\t\t ✓ "
-}
-
-func getWelcomeUI(m mainModel) string {
-	if m.currentTab != 0 {
-		return ""
-	}
-
-	titleStyle := lipgloss.NewStyle().
-		PaddingTop(2).
-		MarginLeft(6).
-		Height(2).
-		Bold(true).Foreground(theme.blue).
-		Render("Chef!")
-
-	descriptionStyle := lipgloss.NewStyle().
-		Bold(true).PaddingTop(3).
-		Foreground(theme.lavender).
-		MarginLeft(2).
-		Render("Your new inventory cli tool")
-
-	line := lipgloss.NewStyle().
-		BorderForeground(theme.pink).
-		BorderTop(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		PaddingTop(-1).
-		Width(50).
-		MarginLeft(6).Render()
-
-	itemStyle := lipgloss.NewStyle().
-		Foreground(theme.pink).
-		TabWidth(4) // Tab width can be different per terminal
-
-	listItems := list.New(
-		"Check your inventory",
-		"Make a grocery list",
-		"Support James",
-	).ItemStyle(itemStyle).Enumerator(enumerateList)
-
-	spacer := lipgloss.NewStyle().
-		Height(3).Render(" ")
-
-	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
-
-	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, listItems.String(), spacer, homeHelperText, spacer)
-}
-
-func getTableUI(m mainModel) string {
-	if m.currentTab != 1 {
-		return ""
-	}
-
-	focusedTable := lipgloss.JoinHorizontal(lipgloss.Top, focusedTableStyle.Render(m.table.View()), modelStyle.Render(m.textInput.View())+"\n")
-	unfocusedTable := lipgloss.JoinHorizontal(lipgloss.Top, baseTableStyle.Render(m.table.View()), focusedModelStyle.Render(m.textInput.View())+"\n")
-
-	if m.state == tableView {
-		return focusedTable
-	}
-	return unfocusedTable
-}
-
-func getInputUI(m mainModel) string {
-	if m.currentTab != 1 {
-		return ""
-	}
-
-	tableHelperText := tipContainerStyle.Render("tab: focus next • enter: create new item • q: exit")
-	inputHelperText := tipContainerStyle.Render("tab: focus next • enter: view entry • q: exit")
-	focusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), tableHelperText)
-	unfocusedInput := lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().PaddingTop(1).Render(), inputHelperText)
-
-	if m.state == tableView {
-		return unfocusedInput
-	}
-	return focusedInput
-}
-
-func getListUI(m mainModel) string {
-	if m.currentTab != 2 {
-		return ""
-	}
-
-	titleStyle := lipgloss.NewStyle().
-		PaddingTop(2).
-		MarginLeft(6).
-		Height(2).
-		Bold(true).Foreground(theme.blue).
-		Render("Grocery List")
-
-	descriptionStyle := lipgloss.NewStyle().
-		Bold(true).PaddingTop(3).
-		Foreground(theme.lavender).
-		MarginLeft(2).
-		Render("Coming soon...")
-
-	line := lipgloss.NewStyle().
-		BorderForeground(theme.pink).
-		BorderTop(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		PaddingTop(-1).
-		Width(50).
-		MarginLeft(6).Render()
-
-	spacer := lipgloss.NewStyle().
-		Height(3).Render(" ")
-
-	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
-
-	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, spacer, homeHelperText, spacer)
-}
-
-func getSettingsUI(m mainModel) string {
-	if m.currentTab != 3 {
-		return ""
-	}
-
-	titleStyle := lipgloss.NewStyle().
-		PaddingTop(2).
-		MarginLeft(6).
-		Height(2).
-		Bold(true).Foreground(theme.blue).
-		Render("Chef!")
-
-	descriptionStyle := lipgloss.NewStyle().
-		Bold(true).PaddingTop(3).
-		Foreground(theme.lavender).
-		MarginLeft(2).
-		Render("Your new inventory cli tool")
-
-	line := lipgloss.NewStyle().
-		BorderForeground(theme.pink).
-		BorderTop(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		PaddingTop(-1).
-		Width(50).
-		MarginLeft(6).Render()
-
-	bodyStyle := lipgloss.NewStyle().
-		Bold(true).PaddingTop(2).
-		Foreground(theme.lavender).
-		MarginLeft(6).
-		Render("Settings coming soon...\n\nEventually you'll be able to wipe your list.")
-
-	spacer := lipgloss.NewStyle().
-		Height(3).Render(" ")
-
-	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
-
-	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, bodyStyle, spacer, homeHelperText, spacer)
-}
-
 func (m mainModel) View() string {
-	var s string = getTabUI(m)
+	var s string = ui.GetTabUI(shared.MainModel(m))
 
 	// Tab 1 UI
-	s += getWelcomeUI(m)
+	s += ui.GetWelcomeUI(shared.MainModel(m))
 
 	// Tab 2 UI
-	s += getTableUI(m)
-	s += getInputUI(m)
+	s += ui.GetTableUI(shared.MainModel(m))
+	s += ui.GetInputUI(shared.MainModel(m))
 
 	// Tab 3 UI
-	s += getListUI(m)
+	s += ui.GetListUI(shared.MainModel(m))
 
 	// Tab 4 UI
-	s += getSettingsUI(m)
+	s += ui.GetSettingsUI(shared.MainModel(m))
 
 	return s
 }
 
 // Add initial actions on mount.
 func (m mainModel) Init() tea.Cmd {
-	return tea.Batch(m.textInput.Focus(), textinput.Blink) // no batch?
+	return tea.Batch(m.TextInput.Focus(), textinput.Blink) // no batch?
 }
 
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -397,74 +98,74 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "enter":
-			if m.state == inputView {
-				item := m.textInput.Value()
+			if m.State == shared.InputView {
+				item := m.TextInput.Value()
 				db.CreateGroceryItem(item)
-				rows := m.table.Rows()
-				id := len(m.table.Rows()) + 1
+				rows := m.Table.Rows()
+				id := len(m.Table.Rows()) + 1
 				row := []string{fmt.Sprint(id), item, fmt.Sprint(1)}
 				rows = append(rows, row)
-				m.table.SetRows(rows)
-				m.table.GotoBottom()
-				m.textInput.Reset()
-				m.textInput.Cursor.SetMode(cursor.New().Mode())
+				m.Table.SetRows(rows)
+				m.Table.GotoBottom()
+				m.TextInput.Reset()
+				m.TextInput.Cursor.SetMode(cursor.New().Mode())
 			}
 		case "tab":
-			if m.state == tableView {
-				m.state = inputView
-				m.table.Blur()
-				m.textInput.Focus()
+			if m.State == shared.TableView {
+				m.State = shared.InputView
+				m.Table.Blur()
+				m.TextInput.Focus()
 			} else {
-				m.state = tableView
-				m.textInput.Blur()
-				m.table.Focus()
+				m.State = shared.TableView
+				m.TextInput.Blur()
+				m.Table.Focus()
 			}
 
 		case "shift+tab":
-			switch m.currentTab {
+			switch m.CurrentTab {
 			case 0:
-				m.currentTab = 1
+				m.CurrentTab = 1
 			case 1:
-				m.currentTab = 2
+				m.CurrentTab = 2
 			case 2:
-				m.currentTab = 3
+				m.CurrentTab = 3
 			case 3:
-				m.currentTab = 0
+				m.CurrentTab = 0
 			default:
-				m.currentTab = 0
+				m.CurrentTab = 0
 			}
 
 		case "h":
-			if !m.textInput.Focused() {
-				m.currentTab = 0
+			if !m.TextInput.Focused() {
+				m.CurrentTab = 0
 			}
 
 		case "i":
-			if !m.textInput.Focused() {
-				m.currentTab = 1
+			if !m.TextInput.Focused() {
+				m.CurrentTab = 1
 			}
 
 		case "g":
-			if !m.textInput.Focused() {
-				m.currentTab = 2
+			if !m.TextInput.Focused() {
+				m.CurrentTab = 2
 			}
 		case "s":
-			if !m.textInput.Focused() {
-				m.currentTab = 3
+			if !m.TextInput.Focused() {
+				m.CurrentTab = 3
 			}
 		}
 
-		switch m.state {
+		switch m.State {
 		// update whichever model is focused
-		case inputView:
-			m.textInput, cmd = m.textInput.Update(msg)
+		case shared.InputView:
+			m.TextInput, cmd = m.TextInput.Update(msg)
 			cmds = append(cmds, cmd)
 			cmds = append(cmds, textinput.Blink)
-		case tableView:
-			m.table, cmd = m.table.Update(msg)
+		case shared.TableView:
+			m.Table, cmd = m.Table.Update(msg)
 			cmds = append(cmds, cmd)
 		default:
-			m.table, cmd = m.table.Update(msg)
+			m.Table, cmd = m.Table.Update(msg)
 			cmds = append(cmds, cmd)
 		}
 	}

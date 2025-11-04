@@ -1,4 +1,4 @@
-module go-bubble-tea-playground/todo-list
+module chef/todo-list
 
 go 1.24.1
 
