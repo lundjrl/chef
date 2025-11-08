@@ -110,12 +110,19 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.TextInput.Reset()
 				m.TextInput.Cursor.SetMode(cursor.New().Mode())
 			}
+		case "2":
+			selected := m.Table.SelectedRow()
+			id := selected[0]
+			count := 2 // count should be a dynamic string
+
+			db.UpdateGroceryItem(id, count)
 		case "tab":
-			if m.State == shared.TableView {
+			switch m.State {
+			case shared.TableView:
 				m.State = shared.InputView
 				m.Table.Blur()
 				m.TextInput.Focus()
-			} else {
+			case shared.InputView:
 				m.State = shared.TableView
 				m.TextInput.Blur()
 				m.Table.Focus()

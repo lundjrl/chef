@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	model "github.com/lundjrl/go-bubble-tea-playground/shared/database"
+	model "github.com/lundjrl/chef/shared/database"
 )
 
 func TestGetGroceryItemByName(t *testing.T) {

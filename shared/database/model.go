@@ -20,18 +20,11 @@ type CheckboxItem struct {
 	Checked bool   `json:"checked"`
 }
 
-// func GetGroceryItems() (*sql.rows, error){
-// 	db := DBConn
-// 	var items []GroceryItem
-// 	result := db.Find(&items)
-// 	return result.Rows()
-// }
-
 func GetGroceryItemByName(itemName string) (string, error) {
 	name := strings.ToLower(itemName)
 
 	if len(name) <= 0 {
-		return "", errors.New("Please type a grocery item.")
+		return "", errors.New("please type a grocery item")
 	}
 
 	db := DBConn
@@ -45,7 +38,7 @@ func CreateGroceryItem(itemName string) (string, error) {
 	name := strings.ToLower(itemName)
 
 	if len(name) <= 0 {
-		return "", errors.New("Please type a grocery item.")
+		return "", errors.New("please type a grocery item")
 	}
 
 	db := DBConn
@@ -58,19 +51,31 @@ func CreateGroceryItem(itemName string) (string, error) {
 	return "", result.Error
 }
 
+func UpdateGroceryItem(id string, count int) (string, error) {
+	db := DBConn
+
+	var item GroceryItem
+	db.First(&item, "Id")
+
+	item.Count = count
+	result := db.Save(&item)
+
+	return "Item updated.", result.Error
+}
+
 func DeleteGroceryItem(itemName string) (string, error) {
 	name := strings.ToLower(itemName)
 	db := DBConn
 
 	if len(name) <= 0 {
-		return "", errors.New("Please type a grocery item.")
+		return "", errors.New("please type a grocery item")
 	}
 
 	var item GroceryItem
 	db.First(&item, "Name = ?", name)
 
 	if item.Name == "" {
-		return "", errors.New("There's no grocery item with that name.")
+		return "", errors.New("there's no grocery item with that name")
 	}
 
 	result := db.Delete(&item)
