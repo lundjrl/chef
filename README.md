@@ -1,5 +1,8 @@
 # Chef! A personal home inventory cli app.
 
+![GO](https://github.com/lundjrl/chef/actions/workflows/go.yml/badge.svg)
+
+
 <div>
 <a href="https://github.com/lundjrl/chef">
       <img alt="Screenshot of application home view." src="assets/home.png" width="400px">
