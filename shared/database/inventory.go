@@ -8,19 +8,24 @@ import (
 	"gorm.io/gorm"
 )
 
-type GroceryItem struct {
+type InventoryItem struct {
 	gorm.Model
 	Name  string `json:"name"`
 	Count int    `json:"count"`
 }
 
-type CheckboxItem struct {
-	gorm.Model
-	Name    string `json:"name"`
-	Checked bool   `json:"checked"`
+func GetInventoryItems() []InventoryItem {
+	var items []InventoryItem
+	result := DBConn.Find(&items)
+
+	if result.Error != nil {
+		panic(result.Error)
+	}
+
+	return items
 }
 
-func GetGroceryItemByName(itemName string) (string, error) {
+func GetInventoryItemByName(itemName string) (string, error) {
 	name := strings.ToLower(itemName)
 
 	if len(name) <= 0 {
@@ -29,12 +34,12 @@ func GetGroceryItemByName(itemName string) (string, error) {
 
 	db := DBConn
 
-	var item GroceryItem
+	var item InventoryItem
 	result := db.Find(&item, "Name = ?", name)
 	return result.Name(), result.Error
 }
 
-func CreateGroceryItem(itemName string) (string, error) {
+func CreateInventoryItem(itemName string) (string, error) {
 	name := strings.ToLower(itemName)
 
 	if len(name) <= 0 {
@@ -42,7 +47,7 @@ func CreateGroceryItem(itemName string) (string, error) {
 	}
 
 	db := DBConn
-	item := new(GroceryItem)
+	item := new(InventoryItem)
 	item.Name = name
 	item.Count = 1
 
@@ -51,10 +56,10 @@ func CreateGroceryItem(itemName string) (string, error) {
 	return "", result.Error
 }
 
-func UpdateGroceryItem(id string, count int) (string, error) {
+func UpdateInventoryItem(id string, count int) (string, error) {
 	db := DBConn
 
-	var item GroceryItem
+	var item InventoryItem
 	db.First(&item, "Id")
 
 	item.Count = count
@@ -63,7 +68,7 @@ func UpdateGroceryItem(id string, count int) (string, error) {
 	return "Item updated.", result.Error
 }
 
-func DeleteGroceryItem(itemName string) (string, error) {
+func DeleteInventoryItem(itemName string) (string, error) {
 	name := strings.ToLower(itemName)
 	db := DBConn
 
@@ -71,7 +76,7 @@ func DeleteGroceryItem(itemName string) (string, error) {
 		return "", errors.New("please type a grocery item")
 	}
 
-	var item GroceryItem
+	var item InventoryItem
 	db.First(&item, "Name = ?", name)
 
 	if item.Name == "" {

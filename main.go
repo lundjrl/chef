@@ -25,7 +25,7 @@ func newModel() mainModel {
 		{Title: "Count", Width: 24},
 	}
 
-	var items []db.GroceryItem
+	var items []db.InventoryItem
 	result := db.DBConn.Find(&items)
 
 	if result.Error != nil {
@@ -100,7 +100,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.State == shared.InputView {
 				item := m.TextInput.Value()
-				db.CreateGroceryItem(item)
+				db.CreateInventoryItem(item)
 				rows := m.Table.Rows()
 				id := len(m.Table.Rows()) + 1
 				row := []string{fmt.Sprint(id), item, fmt.Sprint(1)}
@@ -115,7 +115,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			id := selected[0]
 			count := 2 // count should be a dynamic string
 
-			db.UpdateGroceryItem(id, count)
+			db.UpdateInventoryItem(id, count)
 		case "tab":
 			switch m.State {
 			case shared.TableView:

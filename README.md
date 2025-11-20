@@ -2,7 +2,6 @@
 
 ![GO](https://github.com/lundjrl/chef/actions/workflows/go.yml/badge.svg)
 
-
 <div>
 <a href="https://github.com/lundjrl/chef">
       <img alt="Screenshot of application home view." src="assets/home.png" width="400px">
@@ -22,11 +21,15 @@
 
 ## Screenshots
 
+### Manage Your Home Inventory
+
 <div>
 <a href="https://github.com/lundjrl/chef">
       <img alt="Screenshot of application inventory view." src="assets/inventory.png" width="400px">
     </a>
 </div>
+
+### Edit Your Grocery List
 
 ## Running Tests
 

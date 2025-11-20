@@ -6,10 +6,10 @@ import (
 	model "github.com/lundjrl/chef/shared/database"
 )
 
-func TestGetGroceryItemByName(t *testing.T) {
+func TestGetInventoryItemByName(t *testing.T) {
 	model.InitDatabaseConnection()
 
-	val, err := model.GetGroceryItemByName("avocado")
+	val, err := model.GetInventoryItemByName("avocado")
 
 	if err != nil {
 		t.Log(err)

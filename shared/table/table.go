@@ -55,13 +55,7 @@ func Main() (tea.Model, error) {
 		{Title: "Count", Width: 10},
 	}
 
-	var items []db.GroceryItem
-	result := db.DBConn.Find(&items)
-
-	if result.Error != nil {
-		panic(result.Error)
-	}
-
+	items := db.GetInventoryItems()
 	tableRows := []table.Row{}
 
 	for _, item := range items {
