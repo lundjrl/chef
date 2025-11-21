@@ -111,11 +111,17 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.TextInput.Cursor.SetMode(cursor.New().Mode())
 			}
 		case "2":
-			selected := m.Table.SelectedRow()
-			id := selected[0]
+			id := string(rune(m.Table.Cursor()))
 			count := 2 // count should be a dynamic string
 
 			db.UpdateInventoryItem(id, count)
+			rows := m.Table.Rows()
+
+			row := m.Table.SelectedRow()
+			row[2] = "2"
+			rows[0] = row
+
+			m.Table.SetRows(rows)
 		case "tab":
 			switch m.State {
 			case shared.TableView:
