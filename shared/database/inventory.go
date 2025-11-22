@@ -60,7 +60,7 @@ func UpdateInventoryItem(id string, count int) (string, error) {
 	db := DBConn
 
 	var item InventoryItem
-	db.First(&item, "Id")
+	db.Find(&item, "ID = ?", id)
 
 	item.Count = count
 	result := db.Save(&item)

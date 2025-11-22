@@ -17,21 +17,14 @@ import (
 
 type mainModel shared.MainModel
 
-func newModel() mainModel {
-	m := mainModel{State: shared.TableView}
-
+func initTable() table.Model {
 	columns := []table.Column{
 		{Title: "ID", Width: 4},
 		{Title: "Name", Width: 15},
 		{Title: "Count", Width: 24},
 	}
 
-	var items []db.InventoryItem
-	result := db.DBConn.Find(&items)
-
-	if result.Error != nil {
-		panic(result.Error)
-	}
+	items := db.GetInventoryItems()
 
 	tableRows := []table.Row{}
 
@@ -54,7 +47,14 @@ func newModel() mainModel {
 
 	t.SetStyles(s)
 
-	m.Table = t
+	return t
+}
+
+func newModel() mainModel {
+	m := mainModel{State: shared.TableView}
+
+	m.Table = initTable()
+
 	m.TextInput = textinput.New()
 	m.TextInput.Placeholder = "add an item?"
 	m.TextInput.CharLimit = 156
@@ -95,11 +95,13 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+
 	case tea.KeyMsg:
 		count, err := strconv.Atoi(msg.String())
 
 		if err == nil && m.State == shared.TableView {
 			row := m.Table.SelectedRow()
+			// print(row[0], row[1], row[2])
 
 			db.UpdateInventoryItem(row[0], count)
 			rows := m.Table.Rows()
