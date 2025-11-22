@@ -20,3 +20,16 @@ func GetGroceryItems() []GroceryItem {
 
 	return items
 }
+
+func UpdateGroceryItem(id string, checked bool) (string, error) {
+	db := DBConn
+
+	var item GroceryItem
+	db.Find(&item, "ID = ?", id)
+
+	item.Checked = checked
+
+	result := db.Save(&item)
+
+	return "Item updated.", result.Error
+}

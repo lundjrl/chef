@@ -3,13 +3,13 @@ package tests
 import (
 	"testing"
 
-	model "github.com/lundjrl/chef/shared/database"
+	db "github.com/lundjrl/chef/shared/database"
 )
 
 func TestGetInventoryItemByName(t *testing.T) {
-	model.InitDatabaseConnection()
+	db.InitDatabaseConnection()
 
-	val, err := model.GetInventoryItemByName("avocado")
+	val, err := db.GetInventoryItemByName("avocado")
 
 	if err != nil {
 		t.Log(err)

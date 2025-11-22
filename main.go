@@ -50,11 +50,15 @@ func initTable() table.Model {
 	return t
 }
 
+// func initList() {
+// 	items :=
+// }
+
 func newModel() mainModel {
 	m := mainModel{State: shared.TableView}
 
 	m.Table = initTable()
-
+	// m.GroceryList = initList()
 	m.TextInput = textinput.New()
 	m.TextInput.Placeholder = "add an item?"
 	m.TextInput.CharLimit = 156

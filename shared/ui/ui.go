@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/list"
 	"github.com/lundjrl/chef/shared"
+	db "github.com/lundjrl/chef/shared/database"
 )
 
 type Palette struct {
@@ -247,12 +248,26 @@ func GetListUI(m shared.MainModel) string {
 		Width(50).
 		MarginLeft(6).Render()
 
+	itemStyle := lipgloss.NewStyle().
+		Foreground(theme.pink).
+		TabWidth(4) // Tab width can be different per terminal
+
+	items := db.GetGroceryItems()
+
+	var listStrings []string
+
+	for _, item := range items {
+		listStrings = append(listStrings, item.Name)
+	}
+
+	listItems := list.New(listStrings).ItemStyle(itemStyle).Enumerator(enumerateList)
+
 	spacer := lipgloss.NewStyle().
 		Height(3).Render(" ")
 
 	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
 
-	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, spacer, homeHelperText, spacer)
+	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, listItems.String(), spacer, homeHelperText, spacer)
 }
 
 func GetSettingsUI(m shared.MainModel) string {
