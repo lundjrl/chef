@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/table"
@@ -92,8 +93,24 @@ func (m mainModel) Init() tea.Cmd {
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		count, err := strconv.Atoi(msg.String())
+
+		if err == nil && m.State == shared.TableView {
+			row := m.Table.SelectedRow()
+
+			db.UpdateInventoryItem(row[0], count)
+			rows := m.Table.Rows()
+			row[2] = msg.String()
+
+			index := m.Table.Cursor()
+			rows[index] = row
+
+			m.Table.SetRows(rows)
+		}
+
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -110,18 +127,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.TextInput.Reset()
 				m.TextInput.Cursor.SetMode(cursor.New().Mode())
 			}
-		case "2":
-			id := string(rune(m.Table.Cursor()))
-			count := 2 // count should be a dynamic string
 
-			db.UpdateInventoryItem(id, count)
-			rows := m.Table.Rows()
-
-			row := m.Table.SelectedRow()
-			row[2] = "2"
-			rows[0] = row
-
-			m.Table.SetRows(rows)
 		case "tab":
 			switch m.State {
 			case shared.TableView:
