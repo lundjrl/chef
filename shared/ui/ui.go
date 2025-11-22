@@ -144,8 +144,16 @@ func GetTabUI(m shared.MainModel) string {
 		gap)
 }
 
-func enumerateList(items list.Items, i int) string {
+func enumerateSmallList(items list.Items, i int) string {
 	return "\t\t\t ✓ "
+}
+
+func enumerateCheckedList(items list.Items, i int) string {
+	return "\t\t\t [✓] "
+}
+
+func enumerateUnCheckedList(items list.Items, i int) string {
+	return "\t\t\t [ ] "
 }
 
 func GetWelcomeUI(m shared.MainModel) string {
@@ -182,7 +190,7 @@ func GetWelcomeUI(m shared.MainModel) string {
 		"Check your inventory",
 		"Make a grocery list",
 		"Support James",
-	).ItemStyle(itemStyle).Enumerator(enumerateList)
+	).ItemStyle(itemStyle).Enumerator(enumerateSmallList)
 
 	spacer := lipgloss.NewStyle().
 		Height(3).Render(" ")
@@ -254,20 +262,27 @@ func GetListUI(m shared.MainModel) string {
 
 	items := db.GetGroceryItems()
 
-	var listStrings []string
+	var checkedListItems []string
+	var unCheckedListItems []string
 
 	for _, item := range items {
-		listStrings = append(listStrings, item.Name)
+		if item.Checked {
+			checkedListItems = append(checkedListItems, item.Name)
+		} else {
+			unCheckedListItems = append(unCheckedListItems, item.Name)
+		}
 	}
 
-	listItems := list.New(listStrings).ItemStyle(itemStyle).Enumerator(enumerateList)
+	unCheckedList := list.New(unCheckedListItems).ItemStyle(itemStyle).Enumerator(enumerateUnCheckedList)
+
+	checkedList := list.New(checkedListItems).ItemStyle(itemStyle).Enumerator(enumerateCheckedList)
 
 	spacer := lipgloss.NewStyle().
 		Height(3).Render(" ")
 
 	homeHelperText := tipContainerStyle.MarginLeft(6).Width(60).Padding(1).Render("i: go to inventory • g: go to list • s: go to settings")
 
-	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, listItems.String(), spacer, homeHelperText, spacer)
+	return lipgloss.JoinVertical(lipgloss.Top, lipgloss.JoinHorizontal(lipgloss.Center, titleStyle, descriptionStyle), line, unCheckedList.String(), checkedList.String(), spacer, homeHelperText, spacer)
 }
 
 func GetSettingsUI(m shared.MainModel) string {

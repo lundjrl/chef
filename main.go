@@ -105,7 +105,6 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if err == nil && m.State == shared.TableView {
 			row := m.Table.SelectedRow()
-			// print(row[0], row[1], row[2])
 
 			db.UpdateInventoryItem(row[0], count)
 			rows := m.Table.Rows()
