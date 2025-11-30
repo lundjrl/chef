@@ -1,4 +1,4 @@
-package checkbox
+package components
 
 import (
 	"fmt"
