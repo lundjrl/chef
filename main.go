@@ -181,6 +181,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch m.State {
 		// update whichever model is focused
+		case shared.
 		case shared.InputView:
 			m.TextInput, cmd = m.TextInput.Update(msg)
 			cmds = append(cmds, cmd)
